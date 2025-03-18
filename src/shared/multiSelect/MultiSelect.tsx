@@ -20,15 +20,28 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   const [inputValue, setInputValue] = useState<string>('');
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1); // Track focused position for input
+  const [inputWidth, setInputWidth] = useState<number>(2); // Initial width of the input
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedValuesRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const hiddenSpanRef = useRef<HTMLSpanElement>(null);
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
     setIsOpen(true); // Keep the dropdown open while typing
   };
+
+  // Update input width based on its content
+  useEffect(() => {
+    if (hiddenSpanRef.current && inputRef.current) {
+      // Measure the width of the input's value using a hidden span
+      hiddenSpanRef.current.textContent = inputValue || placeholder || '';
+      const newWidth = hiddenSpanRef.current.offsetWidth + 4; // Add some padding
+      setInputWidth(newWidth);
+      inputRef.current.style.width = `${newWidth}px`;
+    }
+  }, [inputValue, placeholder]);
 
   // Handle selecting an option
   const handleSelect = (option: string) => {
@@ -104,11 +117,13 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   };
 
   // Handle input blur
-  const handleInputBlur = (e: React.FocusEvent) => {
-    // Check if the newly focused element is inside the component
-    // if (!dropdownRef.current?.contains(e.relatedTarget as Node)) {
-    //   setIsOpen(false); // Hide the dropdown if focus is outside the component
-    // }
+  const handleInputBlur = () => {
+    // Use setTimeout to check the active element after the blur event
+    setTimeout(() => {
+      if (!dropdownRef.current?.contains(document.activeElement)) {
+        setIsOpen(false); // Hide the dropdown if focus is outside the component
+      }
+    }, 0);
   };
 
   // Focus the input when it moves
@@ -127,6 +142,17 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
   return (
     <div className="multi-select" ref={dropdownRef}>
+      {/* Hidden span to measure the width of the input's value */}
+      <span
+        ref={hiddenSpanRef}
+        style={{
+          position: 'absolute',
+          visibility: 'hidden',
+          whiteSpace: 'pre',
+          fontSize: 'inherit',
+          fontFamily: 'inherit',
+        }}
+      />
       <div
         className={classNames('selected-values', { 'single-line': maxLines === 1 })}
         ref={selectedValuesRef}
@@ -143,6 +169,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             placeholder={placeholder}
             onFocus={() => setIsOpen(true)}
             className="small-input"
+            style={{ width: `${inputWidth}px` }} // Set dynamic width
           />
         )}
         {selectedValues.map((value, index) => (
@@ -167,6 +194,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
                 placeholder={placeholder}
                 onFocus={() => setIsOpen(true)}
                 className="small-input"
+                style={{ width: `${inputWidth}px` }} // Set dynamic width
               />
             )}
           </React.Fragment>
@@ -183,6 +211,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             placeholder={placeholder}
             onFocus={() => setIsOpen(true)}
             className="small-input"
+            style={{ width: `${inputWidth}px` }} // Set dynamic width
           />
         )}
       </div>
