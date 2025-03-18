@@ -32,10 +32,8 @@ function App() {
   ];
   return (
     <>
-      <Select
-        options={options}
-      />
-      <MultiSelect options={options2} placeholder="" />
+     
+      <MultiSelect options={options2} placeholder="" allowCustomOptions />
     </>
   )
 }

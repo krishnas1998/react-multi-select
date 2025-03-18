@@ -7,20 +7,27 @@ interface MultiSelectProps {
   options: string[]; // Array of options to display
   placeholder?: string; // Placeholder text for the input
   maxLines?: number; // Maximum number of lines for the selected values
+  allowCustomOptions?: boolean; // Allow users to add custom options
 }
 
-const MultiSelect: React.FC<MultiSelectProps> = ({ options, placeholder, maxLines = 1 }) => {
+const MultiSelect: React.FC<MultiSelectProps> = ({
+  options,
+  placeholder,
+  maxLines = 1,
+  allowCustomOptions = false, // Default to false
+}) => {
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState<string>('');
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1); // Track focused position for input
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedValuesRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
-    setIsOpen(true);
+    setIsOpen(true); // Keep the dropdown open while typing
   };
 
   // Handle selecting an option
@@ -38,7 +45,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, placeholder, maxLine
     }
     setInputValue('');
     setFocusedIndex(-1); // Reset focus after selection
-    // Do not close the dropdown
+    setIsOpen(true); // Keep the dropdown open
+    if (inputRef.current) {
+      inputRef.current.focus(); // Keep the input focused
+    }
   };
 
   // Handle removing a selected option
@@ -66,9 +76,16 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, placeholder, maxLine
       // Remove the selected option to the left of the input
       handleRemove(focusedIndex);
       setFocusedIndex(focusedIndex - 1); // Move focus left after removal
-    } else if (e.key === 'Enter' && isOpen && filteredOptions.length > 0) {
-      // Select the first filtered option on Enter
-      handleSelect(filteredOptions[0]);
+    } else if (e.key === 'Enter') {
+      if (inputValue.trim() !== '') {
+        if (allowCustomOptions && !options.includes(inputValue)) {
+          // Add the custom option to the selected values
+          handleSelect(inputValue);
+        } else if (isOpen && filteredOptions.length > 0) {
+          // Select the first filtered option on Enter
+          handleSelect(filteredOptions[0]);
+        }
+      }
     } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       // Scroll the selected values container horizontally
       if (selectedValuesRef.current) {
@@ -76,6 +93,22 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, placeholder, maxLine
         selectedValuesRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
       }
     }
+  };
+
+  // Handle mouse click to move the input
+  const handleMouseClick = (index: number) => {
+    setFocusedIndex(index);
+    if (inputRef.current) {
+      inputRef.current.focus(); // Focus the input when clicking on a selected option
+    }
+  };
+
+  // Handle input blur
+  const handleInputBlur = (e: React.FocusEvent) => {
+    // Check if the newly focused element is inside the component
+    // if (!dropdownRef.current?.contains(e.relatedTarget as Node)) {
+    //   setIsOpen(false); // Hide the dropdown if focus is outside the component
+    // }
   };
 
   // Focus the input when it moves
@@ -93,18 +126,32 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, placeholder, maxLine
   );
 
   return (
-    <div className="multi-select">
+    <div className="multi-select" ref={dropdownRef}>
       <div
         className={classNames('selected-values', { 'single-line': maxLines === 1 })}
         ref={selectedValuesRef}
       >
+        {/* Render the input before the first selected option if focusedIndex is -1 */}
+        {focusedIndex === -1 && (
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onBlur={handleInputBlur}
+            placeholder={placeholder}
+            onFocus={() => setIsOpen(true)}
+            className="small-input"
+          />
+        )}
         {selectedValues.map((value, index) => (
           <React.Fragment key={index}>
             <div
               className={classNames('selected-value', {
                 focused: index === focusedIndex,
               })}
-              onClick={() => setFocusedIndex(index)}
+              onClick={() => handleMouseClick(index)}
             >
               {value}
               <button onClick={() => handleRemove(index)}>&times;</button>
@@ -116,6 +163,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, placeholder, maxLine
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
+                onBlur={handleInputBlur}
                 placeholder={placeholder}
                 onFocus={() => setIsOpen(true)}
                 className="small-input"
@@ -123,13 +171,15 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, placeholder, maxLine
             )}
           </React.Fragment>
         ))}
-        {(focusedIndex === -1 || focusedIndex === selectedValues.length) && (
+        {/* Render the input after the last selected option if focusedIndex is equal to the length */}
+        {focusedIndex === selectedValues.length && (
           <input
-            ref={focusedIndex === -1 ? inputRef : undefined}
+            ref={inputRef}
             type="text"
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onBlur={handleInputBlur}
             placeholder={placeholder}
             onFocus={() => setIsOpen(true)}
             className="small-input"
@@ -147,6 +197,16 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ options, placeholder, maxLine
               {option}
             </div>
           ))}
+          {allowCustomOptions &&
+            inputValue.trim() !== '' &&
+            !options.includes(inputValue) && (
+              <div
+                className="option custom-option"
+                onClick={() => handleSelect(inputValue)}
+              >
+                Add "{inputValue}"
+              </div>
+            )}
         </div>
       )}
     </div>
