@@ -48,16 +48,17 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     if (!selectedValues.includes(option)) {
       const newSelectedValues = [...selectedValues];
       if (focusedIndex !== -1) {
-        // Insert the new option at the focused index
+        // Insert the new option at the focused index + 1
         newSelectedValues.splice(focusedIndex + 1, 0, option);
+        setFocusedIndex(focusedIndex + 1); // Move focus to the newly inserted option
       } else {
         // Add the new option to the end
         newSelectedValues.push(option);
+        setFocusedIndex(newSelectedValues.length - 1); // Move focus to the newly added option
       }
       setSelectedValues(newSelectedValues);
     }
     setInputValue('');
-    setFocusedIndex(-1); // Reset focus after selection
     setIsOpen(true); // Keep the dropdown open
     if (inputRef.current) {
       inputRef.current.focus(); // Keep the input focused
